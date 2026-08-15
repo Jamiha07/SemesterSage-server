@@ -48,7 +48,7 @@ async function callGroqWithFailover(payload) {
 }
 
 app.post('/ask', async (req, res) => {
-    const { question, courseContext } = req.body;
+    const { question, courseContext, history } = req.body;
 
     if (!question) {
         return res.status(400).json({ error: 'Missing question' });
@@ -56,12 +56,17 @@ app.post('/ask', async (req, res) => {
 
     const systemPrompt = `You are SemesterSage AI, an expert tutor for NUST SEECS students. Provide concise, high-level academic guidance for the course: ${courseContext || 'General'}`;
 
+    // `history` is the whole conversation so far (client-managed), so Sage actually
+    // remembers earlier messages instead of treating every request as brand new.
+    const priorMessages = Array.isArray(history) ? history : [];
+
     try {
         const groqResponse = await callGroqWithFailover({
             model: 'llama-3.3-70b-versatile',
             temperature: 0.7,
             messages: [
                 { role: 'system', content: systemPrompt },
+                ...priorMessages,
                 { role: 'user', content: question }
             ]
         });
