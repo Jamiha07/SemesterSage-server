@@ -58,9 +58,10 @@ app.post('/ask', async (req, res) => {
         `Answer the student's actual question directly, right away -- do not ask clarifying questions about their ` +
         `semester, program, or which course before answering. A student can ask about any topic regardless of what ` +
         `semester they are currently in, so never gate your answer on that. Only ask a clarifying question if the ` +
-        `question itself is genuinely too vague to answer at all. For simple greetings like "hi", reply briefly and ` +
-        `naturally in one short line -- do not launch into an introduction, a list of courses, or a request for more ` +
-        `information. ` +
+        `question itself is genuinely too vague to answer at all. For simple greetings like "hi", reply warmly in ` +
+        `ONE short, friendly line that also invites them to share what they'd like to study today (e.g. "Hey! What ` +
+        `would you like to study today?") -- do not just reply with a bare "hello", and do not launch into a longer ` +
+        `introduction, a list of courses, or a request for their semester. ` +
         `Your response is displayed as plain text with very limited formatting support -- the ONLY formatting available ` +
         `is wrapping a short heading or key term in double asterisks, like **Definition:**, which will render as bold. ` +
         `Use that for section headings to keep the answer well-structured. Do not use any other markdown -- no single ` +
