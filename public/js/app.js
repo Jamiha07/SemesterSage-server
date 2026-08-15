@@ -1,3 +1,45 @@
+// Replaces a native <select> popup (which renders as a jarring unstyled OS picker on
+// mobile) with a themed dropdown. `container` is an empty element that gets filled in;
+// `options` is [{value, label}]; returns { get value(), set value(v) }.
+function createCustomSelect(container, options, initialValue, onChange) {
+    container.classList.add('custom-select');
+    container.innerHTML = `<button type="button" class="custom-select-trigger"></button><div class="custom-select-options"></div>`;
+    const trigger = container.querySelector('.custom-select-trigger');
+    const list = container.querySelector('.custom-select-options');
+    let value = initialValue !== undefined ? String(initialValue) : (options[0] && String(options[0].value));
+
+    function render() {
+        const selected = options.find(o => String(o.value) === value);
+        trigger.textContent = selected ? selected.label : '';
+        list.innerHTML = options.map(o =>
+            `<div class="custom-select-option${String(o.value) === value ? ' selected' : ''}" data-value="${o.value}">${escapeHtml(o.label)}</div>`
+        ).join('');
+    }
+
+    trigger.onclick = (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.custom-select-options.open').forEach(el => { if (el !== list) el.classList.remove('open'); });
+        list.classList.toggle('open');
+    };
+
+    list.addEventListener('click', (e) => {
+        const opt = e.target.closest('.custom-select-option');
+        if (!opt) return;
+        value = opt.dataset.value;
+        render();
+        list.classList.remove('open');
+        if (onChange) onChange(value);
+    });
+
+    document.addEventListener('click', () => list.classList.remove('open'));
+
+    render();
+    return {
+        get value() { return value; },
+        set value(v) { value = String(v); render(); }
+    };
+}
+
 // Renders the shared topbar + sidebar shell into #shell, and wires up navigation.
 // activeMenu is one of: 'home', 'tracker', 'profile', 'admin' -- used to highlight the current page.
 async function renderShell(activeMenu) {
@@ -142,11 +184,8 @@ function injectProfileModal() {
                         <div style="width:32px; height:32px; min-width:32px; border-radius:50%; background:linear-gradient(to bottom right,#2563eb,#38bdf8); display:flex; align-items:center; justify-content:center; font-size:14px;">&#128197;</div>
                         <div style="font-size:10px; color:var(--text-secondary); font-weight:bold; letter-spacing:1px;">CURRENT SEMESTER</div>
                     </div>
-                    <div style="display:flex; gap:10px;">
-                        <select id="profileSemesterSelect" style="flex:1; margin:0;">
-                            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
-                            <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
-                        </select>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <div id="profileSemesterSelect" style="flex:1; background:var(--bg); border-radius:8px; padding:0 10px;"></div>
                         <button class="btn btn-primary" style="margin:0; padding:10px 20px;" onclick="updateProfileSemester()">Update</button>
                     </div>
                 </div>
@@ -172,13 +211,17 @@ function injectProfileModal() {
     document.body.appendChild(wrapper);
 }
 
+let profileSemesterSelect;
+
 function openProfileModal() {
     const user = getUser();
     document.getElementById('profileUsername').textContent = '@' + user.username;
     document.getElementById('profileEmail').textContent = user.email;
     document.getElementById('profileKarma').textContent = `★ ${user.reputation} Karma`;
     document.getElementById('profileAvatarLetter').textContent = user.username[0].toUpperCase();
-    document.getElementById('profileSemesterSelect').value = user.semester;
+
+    const semesterOptions = [1,2,3,4,5,6,7,8].map(n => ({ value: n, label: String(n) }));
+    profileSemesterSelect = createCustomSelect(document.getElementById('profileSemesterSelect'), semesterOptions, user.semester);
 
     const [c1, c2] = AVATAR_GRADIENTS[user.avatarId] || AVATAR_GRADIENTS[1];
     document.getElementById('profileAvatarRing').style.background = `linear-gradient(to bottom right, ${c1}, ${c2})`;
@@ -204,7 +247,7 @@ function closeProfileModal() {
 }
 
 async function updateProfileSemester() {
-    const newSem = parseInt(document.getElementById('profileSemesterSelect').value, 10);
+    const newSem = parseInt(profileSemesterSelect.value, 10);
     try {
         await api('/users/me/semester', { method: 'PATCH', body: JSON.stringify({ semester: newSem }) });
         const user = getUser();

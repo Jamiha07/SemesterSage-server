@@ -13,14 +13,14 @@
 <div id="shell"></div>
 <div class="main-content">
     <div class="page-header">
-        <h1>&#9989; My Study Tracker</h1>
+        <h1>My Study Tracker</h1>
         <button class="btn btn-primary" style="margin:0; width:auto; border-radius:25px;" onclick="location.href='sage.html'">&#127891; Open Sage</button>
     </div>
 
     <div class="pill-row">
         <input id="taskText" type="text" placeholder="What do you need to study?">
-        <select id="taskDateOffset"></select>
-        <select id="taskCourse"><option value="General">General</option></select>
+        <div id="taskDateOffset"></div>
+        <div id="taskCourse"></div>
         <button class="btn btn-primary" onclick="addTask()">Add Task</button>
     </div>
 
@@ -42,6 +42,7 @@
 <script>
 const user = getUser();
 let pendingDeleteTaskId = null;
+let dateSelect, courseSelect;
 
 async function init() {
     await renderShell('tracker');
@@ -53,20 +54,19 @@ async function init() {
 // Mirrors the desktop app's daySelector -- a dropdown of relative day offsets
 // ("Today (Sunday)", "Tomorrow (Monday)", ...) instead of a raw date picker.
 function populateDateOffsetOptions() {
-    const select = document.getElementById('taskDateOffset');
     const options = [];
     for (let i = 0; i < 14; i++) {
         const d = new Date();
         d.setDate(d.getDate() + i);
         const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
         const label = i === 0 ? `Today (${weekday})` : i === 1 ? `Tomorrow (${weekday})` : `In ${i} days (${weekday})`;
-        options.push(`<option value="${i}">${label}</option>`);
+        options.push({ value: i, label });
     }
-    select.innerHTML = options.join('');
+    dateSelect = createCustomSelect(document.getElementById('taskDateOffset'), options, 0);
 }
 
 function selectedTargetDate() {
-    const offset = parseInt(document.getElementById('taskDateOffset').value, 10) || 0;
+    const offset = parseInt(dateSelect.value, 10) || 0;
     const d = new Date();
     d.setDate(d.getDate() + offset);
     // Build "YYYY-MM-DD" from local date fields -- toISOString() converts to UTC first,
@@ -78,14 +78,12 @@ function selectedTargetDate() {
 }
 
 async function loadCourseOptions() {
-    const select = document.getElementById('taskCourse');
+    let options = [{ value: 'General', label: 'General' }];
     try {
         const courses = await api(`/courses?program=${user.program}&semester=${user.semester}`);
-        select.innerHTML = '<option value="General">General</option>' +
-            courses.map(c => `<option value="${escapeHtml(c.name)}">${c.code} &mdash; ${c.name}</option>`).join('');
-    } catch (err) {
-        select.innerHTML = '<option value="General">General</option>';
-    }
+        options = options.concat(courses.map(c => ({ value: c.name, label: `${c.code} — ${c.name}` })));
+    } catch (err) { /* falls back to just "General" */ }
+    courseSelect = createCustomSelect(document.getElementById('taskCourse'), options, 'General');
 }
 
 // Mirrors DashboardController.formatDeadlineText() / deadlineColor() -- same urgency
@@ -137,7 +135,7 @@ async function loadTasks() {
 
 async function addTask() {
     const taskText = document.getElementById('taskText').value.trim();
-    const courseTag = document.getElementById('taskCourse').value;
+    const courseTag = courseSelect.value;
     const targetDate = selectedTargetDate();
     if (!taskText || !courseTag) return alert('Please fill out the task and course.');
 

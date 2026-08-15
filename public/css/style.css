@@ -104,7 +104,7 @@ input:focus, select:focus {
 .btn-danger {
     background: transparent;
     color: var(--red);
-    border: 1.5px solid var(--red);
+    border: 1px solid rgba(239,68,68,0.5);
 }
 
 .btn-ghost {
@@ -329,6 +329,13 @@ input:focus, select:focus {
     white-space: nowrap;
 }
 
+.card-header-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+}
+
 .tag-pill {
     display: inline-block;
     background: #312e81;
@@ -337,9 +344,10 @@ input:focus, select:focus {
     border-radius: 5px;
     font-weight: bold;
     font-size: 11px;
+    white-space: nowrap;
 }
 
-.author-tag { color: var(--purple); font-weight: bold; font-size: 12px; }
+.author-tag { color: var(--purple); font-weight: bold; font-size: 12px; white-space: nowrap; }
 
 .question-title { font-size: 17px; font-weight: bold; margin: 10px 0 6px; }
 .question-body { color: #cbd5e1; font-size: 14px; margin: 0 0 12px; }
@@ -405,15 +413,17 @@ input:focus, select:focus {
 
 .modal-box {
     background: var(--bg);
-    border: 2px solid var(--cyan);
+    border: 1px solid var(--cyan);
     border-radius: 15px;
     padding: 26px;
     max-width: 420px;
     width: 100%;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
     box-shadow: 0 20px 60px rgba(0,0,0,0.7);
 }
 
-.modal-box.danger { border-color: var(--red); }
+.modal-box.danger { border-color: rgba(239,68,68,0.5); }
 
 textarea {
     width: 100%;
@@ -428,6 +438,74 @@ textarea {
     min-height: 90px;
 }
 textarea:focus { outline: none; border-color: var(--cyan); }
+
+/* --- Custom dropdown (replaces native <select>, which renders as a jarring
+   unstyled OS picker on mobile instead of looking like part of the app) --- */
+.custom-select { position: relative; }
+
+.custom-select-trigger {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-weight: bold;
+    font-size: 13px;
+    padding: 8px 22px 8px 4px;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    white-space: nowrap;
+    position: relative;
+}
+
+.custom-select-trigger::after {
+    content: '\25BE';
+    position: absolute;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.custom-select-options {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 190px;
+    max-height: 240px;
+    overflow-y: auto;
+    background: var(--input);
+    border: 1px solid var(--cyan);
+    border-radius: 10px;
+    z-index: 300;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.custom-select-options.open { display: block; }
+
+.custom-select-option {
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--text-primary);
+}
+
+.custom-select-option:hover { background: rgba(0,200,255,0.12); }
+.custom-select-option.selected { background: var(--cyan); color: var(--bg); }
+
+/* Plain (non-input-styled) select variant, used inside forms like Register/Admin --
+   still native but at least themed consistently instead of default browser chrome. */
+.custom-select.boxed .custom-select-trigger {
+    display: block;
+    width: 100%;
+    background: var(--input);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 30px 12px 14px;
+    font-size: 15px;
+}
 
 /* --- Scrollbar --- */
 ::-webkit-scrollbar { width: 8px; }

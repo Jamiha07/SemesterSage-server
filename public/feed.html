@@ -73,8 +73,8 @@ async function init() {
     await renderShell('home');
     document.getElementById('pageTitle').textContent =
         courseFilter === 'All' ? '\u{1F3E0} Home Feed' :
-        courseFilter === 'General' ? '\u{1F4AC} General Chat' :
-        '\u{1F4DA} ' + courseFilter;
+        courseFilter === 'General' ? 'General Chat' :
+        courseFilter;
 
     document.getElementById('askBtn').onclick = () => document.getElementById('askModal').classList.add('show');
     document.getElementById('searchInput').addEventListener('input', debounce(loadFeed, 300));
@@ -125,8 +125,10 @@ function renderCard(q) {
     const isOwner = q.author_username === user.username;
     return `
         <div class="card">
-            <span class="tag-pill">${escapeHtml(q.course)}</span>
-            <span class="author-tag" style="margin-left:10px;">Posted by u/${escapeHtml(q.author_username)}</span>
+            <div class="card-header-row">
+                <span class="tag-pill">${escapeHtml(q.course)}</span>
+                <span class="author-tag">Posted by u/${escapeHtml(q.author_username)}</span>
+            </div>
             <div class="question-title">${escapeHtml(q.title)}</div>
             <p class="question-body">${escapeHtml(q.body)}</p>
             <div class="card-footer">
