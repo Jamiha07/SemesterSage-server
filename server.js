@@ -4,48 +4,15 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 
-// A pool of independent Groq accounts' keys, so their rate limits don't share one bucket.
-const GROQ_API_KEYS = process.env.GROQ_API_KEYS.split(',').map(k => k.trim());
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+app.use('/auth', require('./routes/auth'));
+app.use('/questions', require('./routes/questions'));
+app.use('/answers', require('./routes/answers'));
+app.use('/courses', require('./routes/courses'));
+app.use('/tasks', require('./routes/tasks'));
+app.use('/users', require('./routes/users'));
 
-let nextKeyIndex = 0;
-
-// Picks the next key in rotation, wrapping back to the start once it reaches the end.
-function pickNextKey() {
-    const key = GROQ_API_KEYS[nextKeyIndex];
-    nextKeyIndex = (nextKeyIndex + 1) % GROQ_API_KEYS.length;
-    return key;
-}
-
-// Tries each key in the pool, starting from the next one in rotation, until one succeeds
-// or every key has been tried. Only moves on to the next key when the current one is
-// specifically rate-limited (429) -- any other error/success stops immediately.
-async function callGroqWithFailover(payload) {
-    let lastResponse = null;
-
-    for (let attempt = 0; attempt < GROQ_API_KEYS.length; attempt++) {
-        const key = pickNextKey();
-
-        const response = await fetch(GROQ_API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${key}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (response.status !== 429) {
-            return response;
-        }
-
-        console.warn(`Key ending in ...${key.slice(-4)} is rate-limited, trying the next one.`);
-        lastResponse = response;
-    }
-
-    // Every key in the pool was rate-limited.
-    return lastResponse;
-}
+const { callGroqWithFailover } = require('./utils/groq');
+const { buildSystemPrompt } = require('./utils/sagePrompt');
 
 app.post('/ask', async (req, res) => {
     const { question, courseContext, history } = req.body;
@@ -54,20 +21,7 @@ app.post('/ask', async (req, res) => {
         return res.status(400).json({ error: 'Missing question' });
     }
 
-    const systemPrompt = `You are SemesterSage AI, an expert tutor for NUST SEECS students. Provide concise, high-level academic guidance for the course: ${courseContext || 'General'}. ` +
-        `Answer the student's actual question directly, right away -- do not ask clarifying questions about their ` +
-        `semester, program, or which course before answering. A student can ask about any topic regardless of what ` +
-        `semester they are currently in, so never gate your answer on that. Only ask a clarifying question if the ` +
-        `question itself is genuinely too vague to answer at all. For simple greetings like "hi", reply warmly in ` +
-        `ONE short, friendly line that also invites them to share what they'd like to study today (e.g. "Hey! What ` +
-        `would you like to study today?") -- do not just reply with a bare "hello", and do not launch into a longer ` +
-        `introduction, a list of courses, or a request for their semester. ` +
-        `Your response is displayed as plain text with very limited formatting support -- the ONLY formatting available ` +
-        `is wrapping a short heading or key term in double asterisks, like **Definition:**, which will render as bold. ` +
-        `Use that for section headings to keep the answer well-structured. Do not use any other markdown -- no single ` +
-        `asterisks, no #/## headers, no backticks around code. For lists, use a plain dash and a line break for each ` +
-        `item. For code examples, put each line of code on its own line with normal line breaks, under a bold ` +
-        `**Example:** heading, instead of a formatted code block. Keep paragraphs short.`;
+    const systemPrompt = buildSystemPrompt(courseContext);
 
     // `history` is the whole conversation so far (client-managed), so Sage actually
     // remembers earlier messages instead of treating every request as brand new.
