@@ -35,6 +35,10 @@ async function renderShell(activeMenu) {
     document.getElementById('sageToggle').onclick = () => window.location.href = 'sage.html';
     document.getElementById('otherSemestersBtn').onclick = () => toggleOtherSemesters();
 
+    // Sidebar starts open on wide screens (pushes content over) and closed on
+    // narrow ones (opens as an overlay) -- the toggle then works the same either way.
+    toggleSidebar(window.innerWidth >= 900);
+
     loadSidebarCourses(user);
 }
 
@@ -43,15 +47,18 @@ function toggleSidebar(force) {
     const scrim = document.getElementById('sidebarScrim');
     const shouldOpen = force !== undefined ? force : !sidebar.classList.contains('open');
     sidebar.classList.toggle('open', shouldOpen);
-    scrim.classList.toggle('show', shouldOpen);
+    scrim.classList.toggle('show', shouldOpen && window.innerWidth < 900);
+    document.body.classList.toggle('sidebar-open', shouldOpen);
 }
 
-async function loadSidebarCourses(user) {
+async function loadSidebarCourses(user, semester) {
+    const sem = semester || user.semester;
     const container = document.getElementById('subjectsList');
+    container.innerHTML = 'Loading...';
     try {
-        const courses = await api(`/courses?program=${user.program}&semester=${user.semester}`);
+        const courses = await api(`/courses?program=${user.program}&semester=${sem}`);
         if (courses.length === 0) {
-            container.innerHTML = '<p class="text-secondary" style="font-size:12px;">No courses added yet for your semester.</p>';
+            container.innerHTML = '<p class="text-secondary" style="font-size:12px;">No courses added yet for this semester.</p>';
             return;
         }
         container.innerHTML = courses.map(c =>
@@ -62,6 +69,9 @@ async function loadSidebarCourses(user) {
     }
 }
 
+// Mirrors DashboardController's "Other Semesters" panel -- just semester names to pick
+// from; picking one repopulates the ACADEMIC SUBJECTS list for that semester, still
+// strictly scoped to the student's own program (not a dump of every course at once).
 let otherSemestersLoaded = false;
 async function toggleOtherSemesters() {
     const list = document.getElementById('otherSemestersList');
@@ -72,20 +82,9 @@ async function toggleOtherSemesters() {
     if (otherSemestersLoaded) return;
     otherSemestersLoaded = true;
 
-    const user = getUser();
-    try {
-        const courses = await api(`/courses/all-for-program?program=${user.program}`);
-        const bySemester = {};
-        for (const c of courses) {
-            (bySemester[c.semester] = bySemester[c.semester] || []).push(c);
-        }
-        list.innerHTML = Object.keys(bySemester).sort((a, b) => a - b).map(sem => `
-            <div class="sidebar-heading" style="font-size:10px; padding:10px 6px 4px; color:var(--text-secondary);">SEMESTER ${sem}</div>
-            ${bySemester[sem].map(c => `<button class="menu-btn" style="font-size:12px;" onclick="location.href='feed.html?course=${encodeURIComponent(c.name)}'">${c.code} &mdash; ${c.name}</button>`).join('')}
-        `).join('');
-    } catch (err) {
-        list.innerHTML = '<p class="text-secondary" style="font-size:12px;">Could not load.</p>';
-    }
+    list.innerHTML = [1,2,3,4,5,6,7,8].map(sem =>
+        `<button class="menu-btn" style="font-size:12px;" onclick="loadSidebarCourses(getUser(), ${sem})">Semester ${sem}</button>`
+    ).join('');
 }
 
 function logout() {
