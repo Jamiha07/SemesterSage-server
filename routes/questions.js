@@ -47,6 +47,21 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Fetches a single question by id -- used by the question detail page.
+router.get('/:id', async (req, res) => {
+    try {
+        const [[question]] = await pool.query(
+            `SELECT q.*, u.username AS author_username FROM questions q JOIN users u ON q.user_id = u.id WHERE q.id = ?`,
+            [req.params.id]
+        );
+        if (!question) return res.status(404).json({ error: 'Question not found.' });
+        res.json(question);
+    } catch (err) {
+        console.error('Get question error:', err);
+        res.status(500).json({ error: 'Something went wrong.' });
+    }
+});
+
 // Mirrors AskQuestionController's duplicate check (same course, >=0.4 Jaccard, best match wins)
 // followed by QuestionDAO.saveQuestion(). Pass force:true to skip the check and post anyway.
 router.post('/', requireAuth, async (req, res) => {
