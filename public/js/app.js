@@ -10,7 +10,7 @@ async function renderShell(activeMenu) {
             <span class="app-title">SemesterSage</span>
             <input class="search-input" id="searchInput" type="text" placeholder="&#128269; Search questions...">
             <div class="topbar-spacer"></div>
-            <span style="color:var(--purple); font-weight:bold;">Welcome, ${escapeHtml(user.username)}!</span>
+            <span class="welcome-text">Welcome, ${escapeHtml(user.username)}!</span>
         </div>
         <div class="sidebar-scrim" id="sidebarScrim"></div>
         <div class="sidebar" id="sidebar">

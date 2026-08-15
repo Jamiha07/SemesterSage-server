@@ -1,8 +1,8 @@
 :root {
     --bg: #0a1428;
-    --card: #111c32;
+    --card: #16223f;
     --input: #0d172a;
-    --border: #1e293b;
+    --border: #2c3b5c;
     --cyan: #00c8ff;
     --purple: #a855f7;
     --green: #10b981;
@@ -164,9 +164,23 @@ input:focus, select:focus {
     padding: 4px 6px;
 }
 
-.topbar .app-title { font-size: 20px; white-space: nowrap; }
+.topbar .app-title { font-size: 20px; white-space: nowrap; flex-shrink: 0; }
 
-.topbar-spacer { flex: 1; }
+.topbar-spacer { flex: 1; min-width: 0; }
+
+.welcome-text {
+    color: var(--purple);
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90px;
+    font-size: 13px;
+}
+
+@media (min-width: 480px) {
+    .welcome-text { max-width: none; font-size: 15px; }
+}
 
 .search-input {
     display: none;
@@ -199,7 +213,10 @@ input:focus, select:focus {
 /* On wide screens the sidebar pushes the content over instead of overlaying it --
    but only while it's actually open, so the hamburger toggle has real effect here too. */
 @media (min-width: 900px) {
-    body.sidebar-open .main-content { margin-left: 260px; }
+    /* max-width has to account for the sidebar's own 260px, otherwise the fixed
+       1400px cap plus the 260px offset overflows the viewport on any screen
+       narrower than 1660px -- which is most real laptops. */
+    body.sidebar-open .main-content { margin-left: 260px; max-width: min(1400px, calc(100vw - 260px)); }
     .sidebar-scrim { display: none !important; }
 }
 
@@ -268,6 +285,7 @@ input:focus, select:focus {
 
 .card {
     background: var(--card);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 18px;
     margin-bottom: 16px;
