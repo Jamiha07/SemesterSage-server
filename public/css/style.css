@@ -248,8 +248,8 @@ input:focus, select:focus {
 
 .main-content {
     flex: 1;
-    padding: 76px 16px 100px;
-    max-width: 800px;
+    padding: 76px 32px 100px;
+    max-width: 1400px;
     margin: 0 auto;
     width: 100%;
     transition: margin-left 0.25s ease;
@@ -258,6 +258,7 @@ input:focus, select:focus {
 .page-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
     margin-bottom: 20px;
     flex-wrap: wrap;
@@ -270,6 +271,44 @@ input:focus, select:focus {
     border-radius: 12px;
     padding: 18px;
     margin-bottom: 16px;
+}
+
+/* Single-row pill layout for the Study Tracker's "add task" bar -- matches the desktop app. */
+.pill-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--input);
+    border: 1.5px solid var(--cyan);
+    border-radius: 30px;
+    padding: 8px 8px 8px 20px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.pill-row input[type="text"] {
+    flex: 1;
+    min-width: 160px;
+    border: none;
+    background: transparent;
+    padding: 8px 0;
+}
+.pill-row input[type="text"]:focus { border: none; }
+
+.pill-row select {
+    width: auto;
+    border: none;
+    background: transparent;
+    padding: 8px 6px;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+.pill-row .btn-primary {
+    margin: 0;
+    border-radius: 25px;
+    padding: 11px 24px;
+    white-space: nowrap;
 }
 
 .tag-pill {

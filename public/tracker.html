@@ -12,15 +12,15 @@
 <body>
 <div id="shell"></div>
 <div class="main-content">
-    <div class="page-header"><h1>&#9989; My Study Tracker</h1></div>
+    <div class="page-header">
+        <h1>&#9989; My Study Tracker</h1>
+        <button class="btn btn-primary" style="margin:0; width:auto; border-radius:25px;" onclick="location.href='sage.html'">&#127891; Open Sage</button>
+    </div>
 
-    <div class="card">
-        <label class="field-label" style="margin-top:0;">Task</label>
-        <input id="taskText" type="text" placeholder="What do you need to do?">
-        <label class="field-label">Course</label>
-        <select id="taskCourse"><option value="">Loading courses...</option></select>
-        <label class="field-label">Target Date</label>
-        <input id="taskDate" type="date">
+    <div class="pill-row">
+        <input id="taskText" type="text" placeholder="What do you need to study?">
+        <select id="taskDateOffset"></select>
+        <select id="taskCourse"><option value="General">General</option></select>
         <button class="btn btn-primary" onclick="addTask()">Add Task</button>
     </div>
 
@@ -45,23 +45,46 @@ let pendingDeleteTaskId = null;
 
 async function init() {
     await renderShell('tracker');
+    populateDateOffsetOptions();
     await loadCourseOptions();
     await loadTasks();
 }
 
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+// Mirrors the desktop app's daySelector -- a dropdown of relative day offsets
+// ("Today (Sunday)", "Tomorrow (Monday)", ...) instead of a raw date picker.
+function populateDateOffsetOptions() {
+    const select = document.getElementById('taskDateOffset');
+    const options = [];
+    for (let i = 0; i < 14; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
+        const label = i === 0 ? `Today (${weekday})` : i === 1 ? `Tomorrow (${weekday})` : `In ${i} days (${weekday})`;
+        options.push(`<option value="${i}">${label}</option>`);
+    }
+    select.innerHTML = options.join('');
+}
+
+function selectedTargetDate() {
+    const offset = parseInt(document.getElementById('taskDateOffset').value, 10) || 0;
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    // Build "YYYY-MM-DD" from local date fields -- toISOString() converts to UTC first,
+    // which silently shifted the selected day depending on the browser's timezone offset.
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
 }
 
 async function loadCourseOptions() {
     const select = document.getElementById('taskCourse');
     try {
         const courses = await api(`/courses?program=${user.program}&semester=${user.semester}`);
-        select.innerHTML = courses.map(c => `<option value="${escapeHtml(c.name)}">${c.code} &mdash; ${c.name}</option>`).join('');
+        select.innerHTML = '<option value="General">General</option>' +
+            courses.map(c => `<option value="${escapeHtml(c.name)}">${c.code} &mdash; ${c.name}</option>`).join('');
     } catch (err) {
-        select.innerHTML = '<option value="">Could not load courses</option>';
+        select.innerHTML = '<option value="General">General</option>';
     }
 }
 
@@ -69,9 +92,12 @@ async function loadCourseOptions() {
 // wording and color coding as the desktop app's task rows.
 function formatDeadline(dateStr, isCompleted) {
     if (!dateStr) return null;
-    const date = new Date(dateStr);
+    // Parse "YYYY-MM-DD" via the local-time Date(y, m, d) constructor, never new
+    // Date(string) -- the latter parses as UTC and silently shifts by a day depending
+    // on the browser's timezone offset.
+    const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+    const date = new Date(y, m - 1, d);
     const today = new Date(); today.setHours(0,0,0,0);
-    date.setHours(0,0,0,0);
     const daysUntil = Math.round((date - today) / 86400000);
     const fmt = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
@@ -112,13 +138,12 @@ async function loadTasks() {
 async function addTask() {
     const taskText = document.getElementById('taskText').value.trim();
     const courseTag = document.getElementById('taskCourse').value;
-    const targetDate = document.getElementById('taskDate').value || null;
+    const targetDate = selectedTargetDate();
     if (!taskText || !courseTag) return alert('Please fill out the task and course.');
 
     try {
         await api('/tasks', { method: 'POST', body: JSON.stringify({ taskText, courseTag, targetDate }) });
         document.getElementById('taskText').value = '';
-        document.getElementById('taskDate').value = '';
         loadTasks();
     } catch (err) {
         alert(err.message);

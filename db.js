@@ -7,7 +7,11 @@ const pool = mysql.createPool({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     waitForConnections: true,
-    connectionLimit: 10
+    connectionLimit: 10,
+    // Return DATE columns as plain "YYYY-MM-DD" strings instead of JS Date objects --
+    // otherwise the driver silently reinterprets them through a timezone, which was
+    // shifting task deadlines by a day depending on server/browser timezone offsets.
+    dateStrings: ['DATE']
 });
 
 module.exports = pool;
