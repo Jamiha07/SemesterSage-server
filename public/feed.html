@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SemesterSage - Feed</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a1428">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+<div id="shell"></div>
+<div class="main-content">
+    <div class="page-header">
+        <h1 id="pageTitle">&#127968; Home Feed</h1>
+    </div>
+    <div id="feedContainer"><p class="empty-state">Loading...</p></div>
+</div>
+
+<button class="floating-btn" id="askBtn">+ Ask Question</button>
+
+<!-- Ask Question modal -->
+<div class="modal-overlay" id="askModal">
+    <div class="modal-box">
+        <h3 style="margin-top:0;">Ask a Question</h3>
+        <label class="field-label">Title</label>
+        <input id="qTitle" type="text" placeholder="A short, clear title">
+        <label class="field-label">Details</label>
+        <textarea id="qBody" placeholder="Explain what you need help with"></textarea>
+        <p class="error-text" id="askError"></p>
+        <div style="display:flex; gap:10px; margin-top:18px;">
+            <button class="btn btn-ghost" style="flex:1;" onclick="closeAskModal()">Cancel</button>
+            <button class="btn btn-primary" style="flex:1; margin-top:0;" id="postBtn" onclick="submitQuestion(false)">Post</button>
+        </div>
+    </div>
+</div>
+
+<!-- Duplicate question warning -->
+<div class="modal-overlay" id="dupModal">
+    <div class="modal-box">
+        <h3 style="margin-top:0; color:var(--purple);">Similar question found</h3>
+        <p class="text-secondary" style="font-size:13px;">Someone may have already asked this:</p>
+        <div class="card" id="dupPreview" style="margin-bottom:0;"></div>
+        <div style="display:flex; gap:10px; margin-top:18px; flex-wrap:wrap;">
+            <button class="btn btn-ghost" style="flex:1;" onclick="closeDupModal()">Cancel</button>
+            <button class="btn btn-primary" style="flex:1; margin-top:0;" onclick="submitQuestion(true)">Post Anyway</button>
+        </div>
+        <button class="link-btn" style="display:block; margin:14px auto 0;" id="viewSimilarBtn">View Question</button>
+    </div>
+</div>
+
+<!-- Delete confirmation -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal-box danger">
+        <p style="font-weight:bold; text-align:center;">Permanently delete this question?</p>
+        <div style="display:flex; gap:10px; margin-top:18px;">
+            <button class="btn btn-ghost" style="flex:1;" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn btn-danger" style="flex:1;" onclick="confirmDelete()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+const params = new URLSearchParams(window.location.search);
+const courseFilter = params.get('course') || 'All';
+const user = getUser();
+let pendingDeleteId = null;
+let similarQuestionId = null;
+
+async function init() {
+    await renderShell('home');
+    document.getElementById('pageTitle').textContent =
+        courseFilter === 'All' ? '\u{1F3E0} Home Feed' :
+        courseFilter === 'General' ? '\u{1F4AC} General Chat' :
+        '\u{1F4DA} ' + courseFilter;
+
+    document.getElementById('askBtn').onclick = () => document.getElementById('askModal').classList.add('show');
+    document.getElementById('searchInput').addEventListener('input', debounce(loadFeed, 300));
+
+    await loadFeed();
+}
+
+function debounce(fn, ms) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+// Mirrors DashboardController.loadFeed()'s Home Feed scoping: "All" only shows General
+// posts plus questions from courses actually in this student's own program+semester --
+// not literally every question from every program.
+async function getMyCourseNames() {
+    const courses = await api(`/courses?program=${user.program}&semester=${user.semester}`);
+    return new Set(courses.map(c => c.name));
+}
+
+async function loadFeed() {
+    const container = document.getElementById('feedContainer');
+    const keyword = document.getElementById('searchInput').value.trim();
+
+    try {
+        const url = keyword
+            ? `/questions?course=${encodeURIComponent(courseFilter)}&keyword=${encodeURIComponent(keyword)}`
+            : `/questions?course=${encodeURIComponent(courseFilter)}`;
+        let questions = await api(url);
+
+        if (courseFilter === 'All') {
+            const myCourses = await getMyCourseNames();
+            questions = questions.filter(q => q.course === 'General' || myCourses.has(q.course));
+        }
+
+        if (questions.length === 0) {
+            container.innerHTML = '<p class="empty-state">No questions here yet. Be the first to ask!</p>';
+            return;
+        }
+
+        container.innerHTML = questions.map(renderCard).join('');
+    } catch (err) {
+        container.innerHTML = `<p class="empty-state">Could not load the feed: ${err.message}</p>`;
+    }
+}
+
+function renderCard(q) {
+    const isOwner = q.author_username === user.username;
+    return `
+        <div class="card">
+            <span class="tag-pill">${escapeHtml(q.course)}</span>
+            <span class="author-tag" style="margin-left:10px;">Posted by u/${escapeHtml(q.author_username)}</span>
+            <div class="question-title">${escapeHtml(q.title)}</div>
+            <p class="question-body">${escapeHtml(q.body)}</p>
+            <div class="card-footer">
+                <div class="vote-box">
+                    <button class="vote-btn" onclick="vote(${q.id}, 1)">&#9650;</button>
+                    <span>${q.upvotes}</span>
+                    <button class="vote-btn" onclick="vote(${q.id}, -1)">&#9660;</button>
+                </div>
+                <button class="link-btn" onclick="location.href='question.html?id=${q.id}'">Read More -&gt;</button>
+                <div class="spacer"></div>
+                ${isOwner ? `<button class="link-btn" style="color:var(--red);" onclick="openDeleteModal(${q.id})">&#128465; Delete</button>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+async function vote(id, value) {
+    try {
+        await api(`/questions/${id}/vote`, { method: 'POST', body: JSON.stringify({ value }) });
+        loadFeed();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+function closeAskModal(clearFields = true) {
+    document.getElementById('askModal').classList.remove('show');
+    if (clearFields) {
+        document.getElementById('qTitle').value = '';
+        document.getElementById('qBody').value = '';
+    }
+    document.getElementById('askError').classList.remove('show');
+}
+
+function closeDupModal() { document.getElementById('dupModal').classList.remove('show'); }
+
+async function submitQuestion(force) {
+    const title = document.getElementById('qTitle').value.trim();
+    const body = document.getElementById('qBody').value.trim();
+    const errEl = document.getElementById('askError');
+    const targetCourse = courseFilter === 'All' ? 'General' : courseFilter;
+
+    if (!title || !body) {
+        errEl.textContent = 'Please fill out both the title and the details.';
+        errEl.classList.add('show');
+        return;
+    }
+
+    try {
+        const result = await api('/questions', {
+            method: 'POST',
+            body: JSON.stringify({ title, body, course: targetCourse, force })
+        });
+
+        if (result.duplicate) {
+            closeAskModal(false);
+            similarQuestionId = result.similarQuestion.id;
+            document.getElementById('dupPreview').innerHTML = `
+                <span class="tag-pill">${escapeHtml(result.similarQuestion.course)}</span>
+                <div class="question-title" style="font-size:15px;">${escapeHtml(result.similarQuestion.title)}</div>
+                <p class="question-body">${escapeHtml(result.similarQuestion.body)}</p>
+                <span class="author-tag">by u/${escapeHtml(result.similarQuestion.author_username)}</span>
+            `;
+            document.getElementById('viewSimilarBtn').onclick = () => location.href = `question.html?id=${similarQuestionId}`;
+            document.getElementById('dupModal').classList.add('show');
+            return;
+        }
+
+        closeAskModal();
+        closeDupModal();
+        loadFeed();
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.add('show');
+    }
+}
+
+function openDeleteModal(id) {
+    pendingDeleteId = id;
+    document.getElementById('deleteModal').classList.add('show');
+}
+function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('show'); pendingDeleteId = null; }
+
+async function confirmDelete() {
+    try {
+        await api(`/questions/${pendingDeleteId}`, { method: 'DELETE' });
+        closeDeleteModal();
+        loadFeed();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+init();
+</script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");</script>
+</body>
+</html>

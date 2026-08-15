@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SemesterSage - Ask Sage</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a1428">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+.chat-history { display: flex; flex-direction: column; gap: 14px; padding-bottom: 20px; }
+.chat-row { display: flex; flex-direction: column; }
+.chat-row.user { align-items: flex-end; }
+.chat-row.sage { align-items: flex-start; }
+.chat-name { font-size: 10px; font-weight: bold; color: var(--text-secondary); margin-bottom: 4px; }
+.bubble { max-width: 80%; padding: 10px 14px; border-radius: 15px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+.bubble.user { background: var(--cyan); color: var(--bg); border-radius: 15px 15px 2px 15px; }
+.bubble.sage { background: #1e293b; border: 1px solid var(--cyan); border-radius: 15px 15px 15px 2px; }
+.copy-btn { background: transparent; border: none; cursor: pointer; font-size: 12px; margin-top: 4px; color: var(--text-secondary); }
+.chat-input-row { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg); border-top: 1px solid var(--border); padding: 12px 16px; display: flex; gap: 10px; }
+@media (min-width: 900px) { .chat-input-row { left: 260px; } }
+.chat-input-row input { flex: 1; margin: 0; border-radius: 25px; }
+.send-btn { background: var(--cyan); color: var(--bg); border: none; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div id="shell"></div>
+<div class="main-content" style="padding-bottom:90px;">
+    <div class="page-header"><h1>&#129302; Ask Sage</h1></div>
+    <div class="chat-history" id="chatHistory"></div>
+</div>
+<div class="chat-input-row">
+    <input id="chatInput" type="text" placeholder="Ask Sage anything...">
+    <button class="send-btn" onclick="sendMessage()">&#10148;</button>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+const API_ASK_URL = 'https://semestersage-server.onrender.com';
+let conversationHistory = [];
+
+async function init() {
+    await renderShell(null);
+    document.getElementById('chatInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+
+    const auto = sessionStorage.getItem('sageAutoAsk');
+    if (auto) {
+        sessionStorage.removeItem('sageAutoAsk');
+        const data = JSON.parse(auto);
+        if (data.type === 'study-plan') {
+            addBubble('You', `How do I study ${data.taskText}?`, 'user');
+            requestStudyPlan(data.taskId);
+        }
+    }
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// Mirrors buildMessageTextFlow() -- only **bold** is real formatting, everything
+// else stays as plain escaped text with line breaks preserved via CSS white-space.
+function formatMessage(text) {
+    const escaped = escapeHtml(text);
+    return escaped.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+}
+
+function addBubble(sender, message, type) {
+    const history = document.getElementById('chatHistory');
+    const row = document.createElement('div');
+    row.className = `chat-row ${type}`;
+    row.innerHTML = `
+        <div class="chat-name">${escapeHtml(sender)}</div>
+        <div class="bubble ${type}">${formatMessage(message)}</div>
+        ${type === 'sage' ? '<button class="copy-btn">&#128203; Copy</button>' : ''}
+    `;
+    if (type === 'sage') {
+        row.querySelector('.copy-btn').onclick = () => navigator.clipboard.writeText(message.replace(/\*\*/g, ''));
+    }
+    history.appendChild(row);
+    window.scrollTo(0, document.body.scrollHeight);
+}
+
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const question = input.value.trim();
+    if (!question) return;
+
+    addBubble('You', question, 'user');
+    input.value = '';
+
+    try {
+        const res = await fetch(`${API_ASK_URL}/ask`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question, courseContext: 'General', history: conversationHistory })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Sage is busy right now.');
+
+        addBubble('Sage', data.answer, 'sage');
+        conversationHistory.push({ role: 'user', content: question });
+        conversationHistory.push({ role: 'assistant', content: data.answer });
+    } catch (err) {
+        addBubble('Sage', `Something went wrong: ${err.message}`, 'sage');
+    }
+}
+
+async function requestStudyPlan(taskId) {
+    try {
+        const data = await api(`/tasks/${taskId}/study-plan`, { method: 'POST' });
+        addBubble('Sage', data.answer, 'sage');
+    } catch (err) {
+        addBubble('Sage', `Something went wrong: ${err.message}`, 'sage');
+    }
+}
+
+init();
+</script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");</script>
+</body>
+</html>

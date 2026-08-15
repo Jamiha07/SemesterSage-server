@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SemesterSage - Study Tracker</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a1428">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+<div id="shell"></div>
+<div class="main-content">
+    <div class="page-header"><h1>&#9989; My Study Tracker</h1></div>
+
+    <div class="card">
+        <label class="field-label" style="margin-top:0;">Task</label>
+        <input id="taskText" type="text" placeholder="What do you need to do?">
+        <label class="field-label">Course</label>
+        <select id="taskCourse"><option value="">Loading courses...</option></select>
+        <label class="field-label">Target Date</label>
+        <input id="taskDate" type="date">
+        <button class="btn btn-primary" onclick="addTask()">Add Task</button>
+    </div>
+
+    <div id="tasksContainer" style="margin-top:20px;"><p class="empty-state">Loading...</p></div>
+</div>
+
+<div class="modal-overlay" id="deleteTaskModal">
+    <div class="modal-box danger">
+        <p style="font-weight:bold; text-align:center;">Delete this task?</p>
+        <div style="display:flex; gap:10px; margin-top:18px;">
+            <button class="btn btn-ghost" style="flex:1;" onclick="closeDeleteTaskModal()">Cancel</button>
+            <button class="btn btn-danger" style="flex:1;" onclick="confirmDeleteTask()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+const user = getUser();
+let pendingDeleteTaskId = null;
+
+async function init() {
+    await renderShell('tracker');
+    await loadCourseOptions();
+    await loadTasks();
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+async function loadCourseOptions() {
+    const select = document.getElementById('taskCourse');
+    try {
+        const courses = await api(`/courses?program=${user.program}&semester=${user.semester}`);
+        select.innerHTML = courses.map(c => `<option value="${escapeHtml(c.name)}">${c.code} &mdash; ${c.name}</option>`).join('');
+    } catch (err) {
+        select.innerHTML = '<option value="">Could not load courses</option>';
+    }
+}
+
+// Mirrors DashboardController.formatDeadlineText() / deadlineColor() -- same urgency
+// wording and color coding as the desktop app's task rows.
+function formatDeadline(dateStr, isCompleted) {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    const today = new Date(); today.setHours(0,0,0,0);
+    date.setHours(0,0,0,0);
+    const daysUntil = Math.round((date - today) / 86400000);
+    const fmt = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    if (isCompleted) return { text: `Was due ${fmt}`, color: '#64748b' };
+    if (daysUntil < 0) return { text: `Overdue • ${fmt}`, color: 'var(--red)' };
+    if (daysUntil === 0) return { text: 'Due today', color: '#f59e0b' };
+    if (daysUntil === 1) return { text: 'Due tomorrow', color: '#f59e0b' };
+    if (daysUntil <= 6) return { text: `Due ${date.toLocaleDateString('en-US', { weekday: 'long' })}`, color: '#94a3b8' };
+    return { text: `Due ${fmt}`, color: '#94a3b8' };
+}
+
+async function loadTasks() {
+    const container = document.getElementById('tasksContainer');
+    try {
+        const tasks = await api('/tasks');
+        if (tasks.length === 0) {
+            container.innerHTML = '<p class="empty-state">No tasks yet. You\'re all caught up! \u{1F389}</p>';
+            return;
+        }
+        container.innerHTML = tasks.map(t => {
+            const deadline = formatDeadline(t.target_date, !!t.is_completed);
+            return `
+            <div class="card" style="display:flex; align-items:center; gap:14px;">
+                <button class="icon-btn" style="font-size:20px; color:${t.is_completed ? 'var(--green)' : '#94a3b8'};" onclick="toggleTask(${t.id}, ${!t.is_completed})">${t.is_completed ? '&#9989;' : '&#9675;'}</button>
+                <div style="flex:1;">
+                    <div style="font-weight:bold; ${t.is_completed ? 'text-decoration:line-through;' : ''}">${escapeHtml(t.task_text)}</div>
+                    ${deadline ? `<div style="font-size:11px; font-weight:bold; color:${deadline.color}; margin-top:4px;">${deadline.text}</div>` : ''}
+                </div>
+                <button class="icon-btn" style="color:var(--cyan);" onclick="askStudyPlan(${t.id}, '${escapeHtml(t.task_text).replace(/'/g, "\\'")}')" title="Ask Sage">&#129302;</button>
+                <button class="icon-btn" style="color:var(--red); font-size:18px;" onclick="openDeleteTaskModal(${t.id})">&#128465;</button>
+            </div>
+        `; }).join('');
+    } catch (err) {
+        container.innerHTML = `<p class="empty-state">Could not load tasks: ${err.message}</p>`;
+    }
+}
+
+async function addTask() {
+    const taskText = document.getElementById('taskText').value.trim();
+    const courseTag = document.getElementById('taskCourse').value;
+    const targetDate = document.getElementById('taskDate').value || null;
+    if (!taskText || !courseTag) return alert('Please fill out the task and course.');
+
+    try {
+        await api('/tasks', { method: 'POST', body: JSON.stringify({ taskText, courseTag, targetDate }) });
+        document.getElementById('taskText').value = '';
+        document.getElementById('taskDate').value = '';
+        loadTasks();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function toggleTask(id, isCompleted) {
+    try {
+        await api(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify({ isCompleted }) });
+        loadTasks();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+function openDeleteTaskModal(id) {
+    pendingDeleteTaskId = id;
+    document.getElementById('deleteTaskModal').classList.add('show');
+}
+function closeDeleteTaskModal() {
+    document.getElementById('deleteTaskModal').classList.remove('show');
+    pendingDeleteTaskId = null;
+}
+async function confirmDeleteTask() {
+    try {
+        await api(`/tasks/${pendingDeleteTaskId}`, { method: 'DELETE' });
+        closeDeleteTaskModal();
+        loadTasks();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function askStudyPlan(id, taskText) {
+    sessionStorage.setItem('sageAutoAsk', JSON.stringify({ type: 'study-plan', taskId: id, taskText }));
+    window.location.href = 'sage.html';
+}
+
+init();
+</script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");</script>
+</body>
+</html>

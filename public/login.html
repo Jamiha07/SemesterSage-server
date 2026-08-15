@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SemesterSage - Login</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a1428">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+<div class="auth-page">
+    <div class="auth-card">
+        <h1 class="app-title" style="text-align:center; font-size:28px; margin:0;">SemesterSage</h1>
+        <p class="text-secondary" style="text-align:center; margin:8px 0 0; font-size:14px;">Welcome back.</p>
+
+        <label class="field-label">Username</label>
+        <input id="username" type="text" placeholder="Enter your username">
+
+        <label class="field-label">Password</label>
+        <input id="password" type="password" placeholder="Enter your password">
+
+        <p class="error-text" id="errorText"></p>
+
+        <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">Login</button>
+        <a class="auth-link" href="register.html">Don't have an account? Register here.</a>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+
+async function handleLogin() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const errorEl = document.getElementById('errorText');
+    errorEl.classList.remove('show');
+
+    if (!username || !password) {
+        errorEl.textContent = 'Please enter your username and password.';
+        errorEl.classList.add('show');
+        return;
+    }
+
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.textContent = 'Logging in...';
+
+    try {
+        const data = await api('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+        saveSession(data.token, data.user);
+        window.location.href = 'feed.html';
+    } catch (err) {
+        if (err.data && err.data.needsVerification) {
+            sessionStorage.setItem('pendingUsername', username);
+            window.location.href = 'verify.html';
+            return;
+        }
+        errorEl.textContent = err.data && err.data.error ? err.data.error : err.message;
+        errorEl.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Login';
+    }
+}
+</script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");</script>
+</body>
+</html>

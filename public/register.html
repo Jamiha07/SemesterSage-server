@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SemesterSage - Register</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a1428">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+<div class="auth-page">
+    <div class="auth-card">
+        <h1 class="app-title" style="text-align:center; font-size:28px; margin:0;">SemesterSage</h1>
+        <p class="text-secondary" style="text-align:center; margin:8px 0 0; font-size:14px;">Join the SEECS student network.</p>
+
+        <label class="field-label">Username</label>
+        <input id="username" type="text" placeholder="Enter your username">
+
+        <label class="field-label">University Email</label>
+        <input id="email" type="email" placeholder="firstname.batchseecs@seecs.edu.pk">
+
+        <label class="field-label">Password</label>
+        <input id="password" type="password" placeholder="Enter your password">
+
+        <label class="field-label">Current Semester</label>
+        <select id="semester">
+            <option value="">Select your current semester</option>
+            <option value="1">1st Semester</option>
+            <option value="2">2nd Semester</option>
+            <option value="3">3rd Semester</option>
+            <option value="4">4th Semester</option>
+            <option value="5">5th Semester</option>
+            <option value="6">6th Semester</option>
+            <option value="7">7th Semester</option>
+            <option value="8">8th Semester</option>
+        </select>
+
+        <label class="field-label">Avatar Color</label>
+        <select id="avatarColor">
+            <option value="1">Cyan</option>
+            <option value="2">Green</option>
+            <option value="3">Orange</option>
+            <option value="4">Red</option>
+            <option value="5">Blue</option>
+            <option value="6">Gold</option>
+        </select>
+
+        <p class="error-text" id="errorText"></p>
+        <p class="success-text" id="successText"></p>
+
+        <button class="btn btn-primary" id="registerBtn" onclick="handleRegister()">Create Account</button>
+        <a class="auth-link" href="login.html">Already have an account? Login here.</a>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+// Mirrors EmailValidator.isValidNustEmail() exactly.
+const EMAIL_PATTERN = /^[a-zA-Z0-9.]+\.(bscs|bese|bsai|bsds|bce)(2[2-6])seecs@seecs\.edu\.pk$/;
+
+function extractProgramCode(email) {
+    const match = email.match(EMAIL_PATTERN);
+    return match ? match[1] : null;
+}
+
+function showError(msg) {
+    const el = document.getElementById('errorText');
+    el.textContent = msg;
+    el.classList.add('show');
+    document.getElementById('successText').classList.remove('show');
+}
+
+async function handleRegister() {
+    const username = document.getElementById('username').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const semester = document.getElementById('semester').value;
+    const avatarId = parseInt(document.getElementById('avatarColor').value, 10);
+
+    if (!username || !email || !password) return showError('Please fill out all fields.');
+    if (password.length < 6) return showError('Password must be at least 6 characters long.');
+
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    if (!hasLetter || !hasSymbol) return showError('Password must contain at least one letter and one symbol.');
+
+    const program = extractProgramCode(email);
+    if (!program) return showError('Must use a valid NUST SEECS student email (Batches 22-26).\nExample: firstname.batchseecs@seecs.edu.pk');
+    if (!semester) return showError('Please select your current semester.');
+
+    const btn = document.getElementById('registerBtn');
+    btn.disabled = true;
+    btn.textContent = 'Creating account...';
+
+    try {
+        await api('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({ username, email, password, avatarId, program, semester: parseInt(semester, 10) })
+        });
+        sessionStorage.setItem('pendingUsername', username);
+        window.location.href = 'verify.html';
+    } catch (err) {
+        showError(err.data && err.data.error ? err.data.error : err.message);
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+    }
+}
+</script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");</script>
+</body>
+</html>

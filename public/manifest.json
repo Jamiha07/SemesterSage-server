@@ -1,0 +1,14 @@
+{
+  "name": "SemesterSage",
+  "short_name": "SemesterSage",
+  "description": "Q&A community and AI study assistant for NUST SEECS students",
+  "start_url": "feed.html",
+  "display": "standalone",
+  "background_color": "#0a1428",
+  "theme_color": "#0a1428",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

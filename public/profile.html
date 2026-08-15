@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SemesterSage - Profile</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a1428">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+.avatar-ring { width: 90px; height: 90px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 0 15px rgba(0,200,255,0.45); }
+.avatar-inner { width: 78px; height: 78px; border-radius: 50%; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: bold; }
+</style>
+</head>
+<body>
+<div id="shell"></div>
+<div class="main-content" style="max-width:420px;">
+    <div class="card" style="text-align:center;">
+        <div class="avatar-ring" id="avatarRing"><div class="avatar-inner" id="avatarLetter">?</div></div>
+        <h2 id="usernameLabel" style="margin:4px 0;">@loading</h2>
+        <p id="emailLabel" class="text-secondary" style="margin:0 0 6px;"></p>
+        <p id="karmaLabel" style="color:#fde047; font-weight:bold;"></p>
+        <span id="badgeLabel" style="display:inline-block; padding:4px 12px; border-radius:15px; font-weight:bold; font-size:12px;"></span>
+
+        <div style="text-align:left; margin-top:24px;">
+            <label class="field-label" style="margin-top:0;">Current Semester</label>
+            <select id="semesterSelect">
+                <option value="1">1st Semester</option><option value="2">2nd Semester</option>
+                <option value="3">3rd Semester</option><option value="4">4th Semester</option>
+                <option value="5">5th Semester</option><option value="6">6th Semester</option>
+                <option value="7">7th Semester</option><option value="8">8th Semester</option>
+            </select>
+            <button class="btn btn-primary" onclick="openSemesterModal()">Update Semester</button>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:24px;">
+            <button class="btn btn-ghost" style="flex:1;" onclick="logout()">Sign Out</button>
+            <button class="btn btn-danger" style="flex:1;" onclick="openDeleteModal()">Delete Account</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="semesterModal">
+    <div class="modal-box">
+        <p id="semesterConfirmText" style="font-weight:bold; text-align:center;"></p>
+        <div style="display:flex; gap:10px; margin-top:18px;">
+            <button class="btn btn-ghost" style="flex:1;" onclick="closeSemesterModal()">Cancel</button>
+            <button class="btn btn-primary" style="flex:1; margin-top:0;" onclick="confirmSemesterUpdate()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="deleteAccountModal">
+    <div class="modal-box danger">
+        <p style="font-weight:bold; text-align:center; color:var(--red);">&#9888;&#65039; Delete Account</p>
+        <p class="text-secondary" style="font-size:13px;">Enter your password to confirm:</p>
+        <input id="deletePassword" type="password" placeholder="Password">
+        <p class="error-text" id="deleteError"></p>
+        <div style="display:flex; gap:10px; margin-top:18px;">
+            <button class="btn btn-ghost" style="flex:1;" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn btn-danger" style="flex:1;" onclick="confirmDeleteAccount()">Confirm Delete</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+const user = getUser();
+const AVATAR_GRADIENTS = {
+    1: ['#00c8ff', '#a855f7'], 2: ['#10b981', '#059669'], 3: ['#f97316', '#ec4899'],
+    4: ['#ef4444', '#dc2626'], 5: ['#3b82f6', '#2563eb'], 6: ['#eab308', '#f59e0b']
+};
+
+async function init() {
+    await renderShell('profile');
+
+    document.getElementById('usernameLabel').textContent = '@' + user.username;
+    document.getElementById('emailLabel').textContent = user.email;
+    document.getElementById('karmaLabel').textContent = `★ ${user.reputation} Karma`;
+    document.getElementById('avatarLetter').textContent = user.username[0].toUpperCase();
+    document.getElementById('semesterSelect').value = user.semester;
+
+    const [c1, c2] = AVATAR_GRADIENTS[user.avatarId] || AVATAR_GRADIENTS[1];
+    document.getElementById('avatarRing').style.background = `linear-gradient(to bottom right, ${c1}, ${c2})`;
+
+    const badge = document.getElementById('badgeLabel');
+    const emailLower = user.email.toLowerCase();
+    if (emailLower.includes('26seecs')) {
+        badge.textContent = '\u{1F331} Curious Freshman';
+        badge.style.background = '#dcfce7'; badge.style.color = '#166534';
+    } else if (emailLower.includes('25seecs')) {
+        badge.textContent = '\u{1F4DA} Wise Sophomore';
+        badge.style.background = '#fef08a'; badge.style.color = '#854d0e';
+    } else {
+        badge.textContent = '\u{1F393} Honorable Senior';
+        badge.style.background = '#e0e7ff'; badge.style.color = '#3730a3';
+    }
+}
+
+function openSemesterModal() {
+    const newSem = document.getElementById('semesterSelect').value;
+    const ordinals = ['1st','2nd','3rd','4th','5th','6th','7th','8th'];
+    document.getElementById('semesterConfirmText').textContent = `Update your semester to ${ordinals[newSem - 1]} Semester?`;
+    document.getElementById('semesterModal').classList.add('show');
+}
+function closeSemesterModal() { document.getElementById('semesterModal').classList.remove('show'); }
+
+async function confirmSemesterUpdate() {
+    const newSem = parseInt(document.getElementById('semesterSelect').value, 10);
+    try {
+        await api('/users/me/semester', { method: 'PATCH', body: JSON.stringify({ semester: newSem }) });
+        user.semester = newSem;
+        saveSession(getToken(), user);
+        closeSemesterModal();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+function openDeleteModal() { document.getElementById('deleteAccountModal').classList.add('show'); }
+function closeDeleteModal() {
+    document.getElementById('deleteAccountModal').classList.remove('show');
+    document.getElementById('deletePassword').value = '';
+    document.getElementById('deleteError').classList.remove('show');
+}
+
+async function confirmDeleteAccount() {
+    const password = document.getElementById('deletePassword').value;
+    const errEl = document.getElementById('deleteError');
+    try {
+        await api('/users/me', { method: 'DELETE', body: JSON.stringify({ password }) });
+        clearSession();
+        window.location.href = 'login.html';
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.add('show');
+    }
+}
+
+init();
+</script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");</script>
+</body>
+</html>

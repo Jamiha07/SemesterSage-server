@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SemesterSage - Question</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a1428">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+<div id="shell"></div>
+<div class="main-content">
+    <button class="link-btn" onclick="history.back()" style="margin-bottom:14px;">&larr; Back</button>
+    <div id="questionContainer"><p class="empty-state">Loading...</p></div>
+
+    <h3 style="margin-top:30px;">Answers</h3>
+    <div id="answersContainer"></div>
+
+    <div class="card" style="margin-top:20px;">
+        <label class="field-label" style="margin-top:0;">Your Answer</label>
+        <textarea id="answerInput" placeholder="Write a helpful answer..."></textarea>
+        <button class="btn btn-primary" style="margin-top:12px;" onclick="submitAnswer()">Post Answer</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="deleteAnswerModal">
+    <div class="modal-box danger">
+        <p style="font-weight:bold; text-align:center;">Permanently delete this answer?</p>
+        <div style="display:flex; gap:10px; margin-top:18px;">
+            <button class="btn btn-ghost" style="flex:1;" onclick="closeDeleteAnswerModal()">Cancel</button>
+            <button class="btn btn-danger" style="flex:1;" onclick="confirmDeleteAnswer()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+const questionId = new URLSearchParams(window.location.search).get('id');
+const user = getUser();
+let pendingDeleteAnswerId = null;
+
+async function init() {
+    await renderShell('home');
+    await loadQuestion();
+    await loadAnswers();
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+async function loadQuestion() {
+    const container = document.getElementById('questionContainer');
+    try {
+        const q = await api(`/questions/${questionId}`);
+        container.innerHTML = `
+            <div class="card">
+                <span class="tag-pill">${escapeHtml(q.course)}</span>
+                <span class="author-tag" style="margin-left:10px;">Posted by u/${escapeHtml(q.author_username)}</span>
+                <div class="question-title" style="font-size:22px;">${escapeHtml(q.title)}</div>
+                <p class="question-body">${escapeHtml(q.body)}</p>
+            </div>
+        `;
+    } catch (err) {
+        container.innerHTML = `<p class="empty-state">Could not load this question: ${err.message}</p>`;
+    }
+}
+
+async function loadAnswers() {
+    const container = document.getElementById('answersContainer');
+    try {
+        const answers = await api(`/answers/question/${questionId}`);
+        if (answers.length === 0) {
+            container.innerHTML = '<p class="empty-state">No answers yet. Be the first to help!</p>';
+            return;
+        }
+        container.innerHTML = answers.map(a => `
+            <div class="card">
+                <span class="author-tag">@${escapeHtml(a.username)}</span>
+                <span class="tag-pill" style="background:#312e81; margin-left:8px;">SEECS Student</span>
+                <p class="question-body" style="margin-top:10px;">${escapeHtml(a.body)}</p>
+                <div class="card-footer">
+                    <div class="vote-box">
+                        <button class="vote-btn" onclick="voteAnswer(${a.id}, 1)">&#9650;</button>
+                        <span>${a.upvotes}</span>
+                        <button class="vote-btn" onclick="voteAnswer(${a.id}, -1)">&#9660;</button>
+                    </div>
+                    <div class="spacer"></div>
+                    ${a.username === user.username ? `<button class="link-btn" style="color:var(--red);" onclick="openDeleteAnswerModal(${a.id})">&#128465; Delete</button>` : ''}
+                </div>
+            </div>
+        `).join('');
+    } catch (err) {
+        container.innerHTML = `<p class="empty-state">Could not load answers: ${err.message}</p>`;
+    }
+}
+
+async function voteAnswer(id, value) {
+    try {
+        await api(`/answers/${id}/vote`, { method: 'POST', body: JSON.stringify({ value }) });
+        loadAnswers();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function submitAnswer() {
+    const body = document.getElementById('answerInput').value.trim();
+    if (!body) return;
+    try {
+        await api(`/answers/question/${questionId}`, { method: 'POST', body: JSON.stringify({ body }) });
+        document.getElementById('answerInput').value = '';
+        loadAnswers();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+function openDeleteAnswerModal(id) {
+    pendingDeleteAnswerId = id;
+    document.getElementById('deleteAnswerModal').classList.add('show');
+}
+function closeDeleteAnswerModal() {
+    document.getElementById('deleteAnswerModal').classList.remove('show');
+    pendingDeleteAnswerId = null;
+}
+async function confirmDeleteAnswer() {
+    try {
+        await api(`/answers/${pendingDeleteAnswerId}`, { method: 'DELETE' });
+        closeDeleteAnswerModal();
+        loadAnswers();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+init();
+</script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");</script>
+</body>
+</html>
