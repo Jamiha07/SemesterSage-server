@@ -418,7 +418,11 @@ input:focus, select:focus {
     padding: 26px;
     max-width: 420px;
     width: 100%;
+    /* vh measures the viewport as if mobile browser chrome (address bar, nav bar)
+       were hidden, which is taller than what's actually visible -- dvh accounts for
+       the real visible area, so the box actually keeps its margins on a phone. */
     max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
     overflow-y: auto;
     box-shadow: 0 20px 60px rgba(0,0,0,0.7);
 }
