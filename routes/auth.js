@@ -6,9 +6,18 @@ const pool = require('../db');
 
 const router = express.Router();
 
+// Explicit host/port (587 STARTTLS) instead of the 'service: gmail' shorthand, and
+// short timeouts so a connectivity problem fails fast (a few seconds) instead of
+// hanging the whole request for minutes -- makes this diagnosable and gives users
+// a real error instead of a stuck "Creating account..." button.
 const mailer = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_APP_PASSWORD }
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_APP_PASSWORD },
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 8000
 });
 
 function generateOtp() {
