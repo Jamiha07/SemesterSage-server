@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SemesterSage - Feed</title>
-<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="stylesheet" href="css/style.css?v=4">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0a1428">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -60,8 +60,8 @@
     </div>
 </div>
 
-<script src="js/api.js?v=3"></script>
-<script src="js/app.js?v=3"></script>
+<script src="js/api.js?v=4"></script>
+<script src="js/app.js?v=4"></script>
 <script>
 const params = new URLSearchParams(window.location.search);
 const courseFilter = params.get('course') || 'All';
@@ -124,27 +124,21 @@ async function loadFeed() {
 function renderCard(q) {
     const isOwner = q.author_username === user.username;
     return `
-        <div class="card">
-            <div class="card-body-row">
-                <div class="card-content">
-                    <div class="card-header-row">
-                        <span class="tag-pill">${escapeHtml(q.course)}</span>
-                        <span class="author-tag">Posted by u/${escapeHtml(q.author_username)}</span>
-                    </div>
-                    <div class="question-title">${escapeHtml(q.title)}</div>
-                    <p class="question-body">${escapeHtml(q.body)}</p>
-                    <div class="card-footer">
-                        <button class="link-btn" onclick="location.href='question.html?id=${q.id}'">Read More -&gt;</button>
-                        <div class="spacer"></div>
-                        ${isOwner ? `<button class="icon-btn" style="color:var(--red);" onclick="openDeleteModal(${q.id})" title="Delete">&#128465;</button>` : ''}
-                    </div>
-                </div>
-                <div class="vote-box">
-                    <button class="vote-btn" onclick="vote(${q.id}, 1)">&#9650;</button>
-                    <span>${q.upvotes}</span>
-                    <button class="vote-btn" onclick="vote(${q.id}, -1)">&#9660;</button>
-                </div>
+        <div class="card has-votes">
+            <div class="card-header-row">
+                <span class="tag-pill">${escapeHtml(q.course)}</span>
+                <span class="author-tag">Posted by u/${escapeHtml(q.author_username)}</span>
             </div>
+            <div class="question-title">${escapeHtml(q.title)}</div>
+            <p class="question-body">${escapeHtml(q.body)}</p>
+            <button class="link-btn" onclick="location.href='question.html?id=${q.id}'">Read More -&gt;</button>
+
+            <div class="vote-box-floating">
+                <button class="vote-btn" onclick="vote(${q.id}, 1)">&#9650;</button>
+                <span>${q.upvotes}</span>
+                <button class="vote-btn" onclick="vote(${q.id}, -1)">&#9660;</button>
+            </div>
+            ${isOwner ? `<button class="delete-circle-btn" onclick="openDeleteModal(${q.id})" title="Delete">&#128465;</button>` : ''}
         </div>
     `;
 }

@@ -352,24 +352,42 @@ input:focus, select:focus {
 .question-title { font-size: 17px; font-weight: bold; margin: 10px 0 6px; }
 .question-body { color: #cbd5e1; font-size: 14px; margin: 0 0 12px; }
 
-/* Card body splits into content (left) + a vertical vote column (right), matching
-   the desktop app's layout instead of cramming votes into the bottom action row. */
-.card-body-row { display: flex; gap: 14px; align-items: stretch; }
-.card-content { flex: 1; min-width: 0; }
-
 .card-footer { display: flex; align-items: center; gap: 14px; }
 
-.vote-box {
+/* Vote controls and delete float over the card's right edge instead of reserving a
+   dedicated column -- text keeps its full width, no divider line. */
+.card.has-votes { position: relative; padding-right: 50px; }
+
+.vote-box-floating {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     gap: 2px;
-    padding-left: 14px;
-    border-left: 1px solid var(--border);
-    min-width: 40px;
 }
-.vote-box span { font-weight: bold; color: var(--text-primary); }
+.vote-box-floating span { font-weight: bold; color: var(--text-primary); }
+
+.delete-circle-btn {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(239,68,68,0.45);
+}
+.delete-circle-btn:hover { background: #dc2626; }
 
 .vote-btn {
     background: transparent;

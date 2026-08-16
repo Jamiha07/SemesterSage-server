@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SemesterSage - Question</title>
-<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="stylesheet" href="css/style.css?v=4">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0a1428">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -35,8 +35,8 @@
     </div>
 </div>
 
-<script src="js/api.js?v=3"></script>
-<script src="js/app.js?v=3"></script>
+<script src="js/api.js?v=4"></script>
+<script src="js/app.js?v=4"></script>
 <script>
 const questionId = new URLSearchParams(window.location.search).get('id');
 const user = getUser();
@@ -82,26 +82,19 @@ async function loadAnswers() {
             return;
         }
         container.innerHTML = answers.map(a => `
-            <div class="card">
-                <div class="card-body-row">
-                    <div class="card-content">
-                        <div class="card-header-row">
-                            <span class="author-tag">@${escapeHtml(a.username)}</span>
-                            <span class="tag-pill">SEECS Student</span>
-                        </div>
-                        <p class="question-body" style="margin-top:10px;">${escapeHtml(a.body)}</p>
-                        ${a.username === user.username ? `
-                        <div class="card-footer">
-                            <div class="spacer"></div>
-                            <button class="icon-btn" style="color:var(--red);" onclick="openDeleteAnswerModal(${a.id})" title="Delete">&#128465;</button>
-                        </div>` : ''}
-                    </div>
-                    <div class="vote-box">
-                        <button class="vote-btn" onclick="voteAnswer(${a.id}, 1)">&#9650;</button>
-                        <span>${a.upvotes}</span>
-                        <button class="vote-btn" onclick="voteAnswer(${a.id}, -1)">&#9660;</button>
-                    </div>
+            <div class="card has-votes">
+                <div class="card-header-row">
+                    <span class="author-tag">@${escapeHtml(a.username)}</span>
+                    <span class="tag-pill">SEECS Student</span>
                 </div>
+                <p class="question-body" style="margin-top:10px;">${escapeHtml(a.body)}</p>
+
+                <div class="vote-box-floating">
+                    <button class="vote-btn" onclick="voteAnswer(${a.id}, 1)">&#9650;</button>
+                    <span>${a.upvotes}</span>
+                    <button class="vote-btn" onclick="voteAnswer(${a.id}, -1)">&#9660;</button>
+                </div>
+                ${a.username === user.username ? `<button class="delete-circle-btn" onclick="openDeleteAnswerModal(${a.id})" title="Delete">&#128465;</button>` : ''}
             </div>
         `).join('');
     } catch (err) {
