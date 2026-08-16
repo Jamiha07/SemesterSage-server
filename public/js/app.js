@@ -168,7 +168,6 @@ function injectProfileModal() {
                     </div>
                     <h2 id="profileUsername" style="margin:4px 0;">@loading</h2>
                     <span id="profileBadge" style="display:inline-block; padding:5px 15px; border-radius:20px; font-weight:bold; font-size:13px; margin-bottom:8px;"></span>
-                    <p id="profileKarma" style="color:#f59e0b; font-weight:bold; margin:6px 0 0;"></p>
                 </div>
 
                 <div style="background:var(--input); border-radius:10px; padding:12px 14px; display:flex; align-items:center; gap:12px; margin-top:20px;">
@@ -217,7 +216,6 @@ function openProfileModal() {
     const user = getUser();
     document.getElementById('profileUsername').textContent = '@' + user.username;
     document.getElementById('profileEmail').textContent = user.email;
-    document.getElementById('profileKarma').textContent = `★ ${user.reputation} Karma`;
     document.getElementById('profileAvatarLetter').textContent = user.username[0].toUpperCase();
 
     const semesterOptions = [1,2,3,4,5,6,7,8].map(n => ({ value: n, label: String(n) }));
