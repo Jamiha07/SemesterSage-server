@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SemesterSage - Study Tracker</title>
-<link rel="stylesheet" href="css/style.css?v=5">
+<link rel="stylesheet" href="css/style.css?v=8">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0a1428">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -124,7 +124,7 @@ async function loadTasks() {
                     <div style="font-weight:bold; ${t.is_completed ? 'text-decoration:line-through;' : ''}">${escapeHtml(t.task_text)}</div>
                     ${deadline ? `<div style="font-size:11px; font-weight:bold; color:${deadline.color}; margin-top:4px;">${deadline.text}</div>` : ''}
                 </div>
-                <button class="icon-btn" style="color:var(--cyan);" onclick="askStudyPlan(${t.id}, '${escapeHtml(t.task_text).replace(/'/g, "\\'")}')" title="Ask Sage">&#129302;</button>
+                <button class="icon-btn robot-btn" onclick="askStudyPlan(${t.id}, '${escapeHtml(t.task_text).replace(/'/g, "\\'")}')" title="Ask Sage"><img src="icons/robot-badge.svg" alt="Ask Sage"></button>
                 <button class="icon-btn" style="color:var(--red); font-size:18px;" onclick="openDeleteTaskModal(${t.id})">&#128465;</button>
             </div>
         `; }).join('');

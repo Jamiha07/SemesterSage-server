@@ -164,6 +164,9 @@ input:focus, select:focus {
     padding: 4px 6px;
 }
 
+.robot-btn { padding: 2px; }
+.robot-btn img { width: 28px; height: 28px; display: block; }
+
 .topbar .app-title { font-size: 20px; white-space: nowrap; flex-shrink: 0; }
 
 .topbar-spacer { flex: 1; min-width: 0; }
