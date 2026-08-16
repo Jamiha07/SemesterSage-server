@@ -241,6 +241,9 @@ function renderProfileBadge(semester) {
     } else if (semester <= 5) {
         badge.textContent = '\u{1F4DA} Wise Sophomore';
         badge.style.background = '#fef08a'; badge.style.color = '#854d0e';
+    } else if (semester <= 7) {
+        badge.textContent = '\u{1F9ED} Focused Junior';
+        badge.style.background = '#fed7aa'; badge.style.color = '#9a3412';
     } else {
         badge.textContent = '\u{1F393} Honorable Senior';
         badge.style.background = '#e0e7ff'; badge.style.color = '#3730a3';
