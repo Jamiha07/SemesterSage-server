@@ -61,7 +61,18 @@ router.post('/register', async (req, res) => {
             'INSERT INTO users (username, password_hash, email, avatar_id, reputation, program, semester, otp_code, is_verified) VALUES (?, ?, ?, ?, 0, ?, ?, ?, 0)',
             [username, passwordHash, email, avatarId, program, semester, otp]
         );
-        await sendVerificationEmail(email, otp);
+
+        try {
+            await sendVerificationEmail(email, otp);
+        } catch (emailErr) {
+            // The account write already succeeded, but the code never reached them --
+            // don't leave a permanently stuck row occupying this username/email with
+            // no way to retry. Roll it back so registering again just works cleanly.
+            console.error('Verification email failed, rolling back account:', emailErr);
+            await pool.query('DELETE FROM users WHERE username = ?', [username]);
+            return res.status(502).json({ error: 'Could not send the verification email. Please try again in a moment.' });
+        }
+
         res.json({ success: true, message: 'Account created. Check your email for a verification code.' });
     } catch (err) {
         if (err.code === 'ER_DUP_ENTRY') {
