@@ -1,47 +1,56 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const pool = require('../db');
 
 const router = express.Router();
 
-// Explicit host/port (587 STARTTLS) instead of the 'service: gmail' shorthand, and
-// short timeouts so a connectivity problem fails fast (a few seconds) instead of
-// hanging the whole request for minutes -- makes this diagnosable and gives users
-// a real error instead of a stuck "Creating account..." button.
-const mailer = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_APP_PASSWORD },
-    connectionTimeout: 8000,
-    greetingTimeout: 8000,
-    socketTimeout: 8000
-});
+// Brevo's HTTP API instead of raw SMTP -- Render blocks outbound SMTP connections
+// entirely (confirmed by testing: Gmail SMTP hung/failed from Render but worked fine
+// locally), so any SMTP-based provider hits the same wall. HTTP isn't blocked.
+async function sendViaBrevo(to, subject, text, html) {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+            'api-key': process.env.BREVO_API_KEY,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            sender: { name: 'SemesterSage', email: process.env.EMAIL_USER },
+            to: [{ email: to }],
+            subject,
+            textContent: text,
+            htmlContent: html
+        })
+    });
+
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(`Brevo send failed: ${res.status} ${JSON.stringify(data)}`);
+    }
+}
 
 function generateOtp() {
     return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 async function sendVerificationEmail(email, code) {
-    await mailer.sendMail({
-        from: `SemesterSage <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: 'Your SemesterSage verification code',
-        text: `Your verification code is ${code}. Enter it in the app to finish creating your account.`,
-        html: `<p>Your verification code is:</p><h2 style="letter-spacing:4px;">${code}</h2><p>Enter it in the app to finish creating your account.</p>`
-    });
+    await sendViaBrevo(
+        email,
+        'Your SemesterSage verification code',
+        `Your verification code is ${code}. Enter it in the app to finish creating your account.`,
+        `<p>Your verification code is:</p><h2 style="letter-spacing:4px;">${code}</h2><p>Enter it in the app to finish creating your account.</p>`
+    );
 }
 
 async function sendPasswordResetEmail(email, code) {
-    await mailer.sendMail({
-        from: `SemesterSage <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: 'Reset your SemesterSage password',
-        text: `Your password reset code is ${code}. It expires in 15 minutes. If you didn't request this, ignore this email.`,
-        html: `<p>Your password reset code is:</p><h2 style="letter-spacing:4px;">${code}</h2><p>It expires in 15 minutes. If you didn't request this, ignore this email.</p>`
-    });
+    await sendViaBrevo(
+        email,
+        'Reset your SemesterSage password',
+        `Your password reset code is ${code}. It expires in 15 minutes. If you didn't request this, ignore this email.`,
+        `<p>Your password reset code is:</p><h2 style="letter-spacing:4px;">${code}</h2><p>It expires in 15 minutes. If you didn't request this, ignore this email.</p>`
+    );
 }
 
 // Mirrors UserService.registerUser() -- hash the password, insert, and let the
