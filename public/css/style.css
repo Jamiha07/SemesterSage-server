@@ -1,8 +1,8 @@
 :root {
     --bg: #0a1428;
-    --card: #16223f;
+    --card: #1c2c52;
     --input: #0d172a;
-    --border: #2c3b5c;
+    --border: #3b4d78;
     --cyan: #00c8ff;
     --purple: #a855f7;
     --green: #10b981;
@@ -352,9 +352,24 @@ input:focus, select:focus {
 .question-title { font-size: 17px; font-weight: bold; margin: 10px 0 6px; }
 .question-body { color: #cbd5e1; font-size: 14px; margin: 0 0 12px; }
 
+/* Card body splits into content (left) + a vertical vote column (right), matching
+   the desktop app's layout instead of cramming votes into the bottom action row. */
+.card-body-row { display: flex; gap: 14px; align-items: stretch; }
+.card-content { flex: 1; min-width: 0; }
+
 .card-footer { display: flex; align-items: center; gap: 14px; }
 
-.vote-box { display: flex; align-items: center; gap: 6px; }
+.vote-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding-left: 14px;
+    border-left: 1px solid var(--border);
+    min-width: 40px;
+}
+.vote-box span { font-weight: bold; color: var(--text-primary); }
 
 .vote-btn {
     background: transparent;
