@@ -226,20 +226,25 @@ function openProfileModal() {
     const [c1, c2] = AVATAR_GRADIENTS[user.avatarId] || AVATAR_GRADIENTS[1];
     document.getElementById('profileAvatarRing').style.background = `linear-gradient(to bottom right, ${c1}, ${c2})`;
 
+    renderProfileBadge(user.semester);
+
+    document.getElementById('profileModal').classList.add('show');
+}
+
+// Based on current semester (updates live when you change it), not batch year -- the
+// desktop app's version was batch-based and never changed after registration.
+function renderProfileBadge(semester) {
     const badge = document.getElementById('profileBadge');
-    const emailLower = user.email.toLowerCase();
-    if (emailLower.includes('26seecs')) {
+    if (semester <= 2) {
         badge.textContent = '\u{1F331} Curious Freshman';
         badge.style.background = '#dcfce7'; badge.style.color = '#166534';
-    } else if (emailLower.includes('25seecs')) {
+    } else if (semester <= 5) {
         badge.textContent = '\u{1F4DA} Wise Sophomore';
         badge.style.background = '#fef08a'; badge.style.color = '#854d0e';
     } else {
         badge.textContent = '\u{1F393} Honorable Senior';
         badge.style.background = '#e0e7ff'; badge.style.color = '#3730a3';
     }
-
-    document.getElementById('profileModal').classList.add('show');
 }
 
 function closeProfileModal() {
@@ -253,6 +258,7 @@ async function updateProfileSemester() {
         const user = getUser();
         user.semester = newSem;
         saveSession(getToken(), user);
+        renderProfileBadge(newSem);
     } catch (err) {
         alert(err.message);
     }
