@@ -6,7 +6,13 @@ const path = require('path');
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// HTML pages always revalidate (never served silently from disk cache) so a deploy is
+// visible immediately; CSS/JS keep normal caching since they're cache-busted with ?v=N.
+app.use(express.static(path.join(__dirname, 'public'), {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+    }
+}));
 
 app.use('/auth', require('./routes/auth'));
 app.use('/questions', require('./routes/questions'));

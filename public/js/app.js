@@ -58,14 +58,14 @@ async function renderShell(activeMenu) {
         <div class="sidebar" id="sidebar">
             <div class="sidebar-heading heading-menu">MAIN MENU</div>
             <button class="menu-btn ${activeMenu === 'home' ? 'active' : ''}" onclick="location.href='feed.html'">&#127968; Home Feed</button>
-            <button class="menu-btn ${activeMenu === 'tracker' ? 'active' : ''}" onclick="location.href='tracker.html'">&#9989; Study Tracker</button>
-            <button class="menu-btn" id="profileMenuBtn">&#128100; My Profile</button>
-            ${user.isAdmin ? `<button class="menu-btn ${activeMenu === 'admin' ? 'active' : ''}" onclick="location.href='admin.html'">&#128736; Admin Panel</button>` : ''}
-            <button class="menu-btn" id="otherSemestersBtn">&#128197; Other Semesters</button>
+            <button class="menu-btn ${activeMenu === 'tracker' ? 'active' : ''}" onclick="location.href='tracker.html'">Study Tracker</button>
+            <button class="menu-btn" id="profileMenuBtn">My Profile</button>
+            ${user.isAdmin ? `<button class="menu-btn ${activeMenu === 'admin' ? 'active' : ''}" onclick="location.href='admin.html'">Admin Panel</button>` : ''}
+            <button class="menu-btn" id="otherSemestersBtn">Other Semesters</button>
             <div class="course-list" id="otherSemestersList" style="display:none;"></div>
 
             <div class="sidebar-heading heading-channels">COMMUNITY</div>
-            <button class="menu-btn" onclick="location.href='feed.html?course=General'">&#128172; General Chat</button>
+            <button class="menu-btn" onclick="location.href='feed.html?course=General'">General Chat</button>
 
             <div class="sidebar-heading heading-subjects">ACADEMIC SUBJECTS</div>
             <div class="course-list" id="subjectsList">Loading...</div>
