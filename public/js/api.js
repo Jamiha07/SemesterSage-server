@@ -14,6 +14,14 @@ function requireLogin() {
     if (!getToken()) window.location.href = 'login.html';
 }
 
+// Toggles a password field between hidden/visible and swaps the eye icon to match.
+function togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    btn.textContent = isHidden ? '\u{1F648}' : '\u{1F441}️';
+}
+
 // Thin wrapper around fetch that adds the API base, JSON headers, and the auth
 // token if we have one. Throws on non-2xx so callers can just try/catch.
 async function api(path, options = {}) {

@@ -1,19 +1,38 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 const pool = require('../db');
 
 const router = express.Router();
+
+const mailer = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_APP_PASSWORD }
+});
 
 function generateOtp() {
     return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-// DEV PHASE ONLY: prints the code instead of emailing it, so testing with fake
-// accounts across programs/semesters doesn't require a real inbox for each one.
-// Swap this out for a real email provider (e.g. Nodemailer) before real launch.
-function sendVerificationEmail(email, code) {
-    console.log(`[DEV] Verification code for ${email}: ${code}`);
+async function sendVerificationEmail(email, code) {
+    await mailer.sendMail({
+        from: `SemesterSage <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: 'Your SemesterSage verification code',
+        text: `Your verification code is ${code}. Enter it in the app to finish creating your account.`,
+        html: `<p>Your verification code is:</p><h2 style="letter-spacing:4px;">${code}</h2><p>Enter it in the app to finish creating your account.</p>`
+    });
+}
+
+async function sendPasswordResetEmail(email, code) {
+    await mailer.sendMail({
+        from: `SemesterSage <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: 'Reset your SemesterSage password',
+        text: `Your password reset code is ${code}. It expires in 15 minutes. If you didn't request this, ignore this email.`,
+        html: `<p>Your password reset code is:</p><h2 style="letter-spacing:4px;">${code}</h2><p>It expires in 15 minutes. If you didn't request this, ignore this email.</p>`
+    });
 }
 
 // Mirrors UserService.registerUser() -- hash the password, insert, and let the
@@ -33,7 +52,7 @@ router.post('/register', async (req, res) => {
             'INSERT INTO users (username, password_hash, email, avatar_id, reputation, program, semester, otp_code, is_verified) VALUES (?, ?, ?, ?, 0, ?, ?, ?, 0)',
             [username, passwordHash, email, avatarId, program, semester, otp]
         );
-        sendVerificationEmail(email, otp);
+        await sendVerificationEmail(email, otp);
         res.json({ success: true, message: 'Account created. Check your email for a verification code.' });
     } catch (err) {
         if (err.code === 'ER_DUP_ENTRY') {
@@ -111,6 +130,66 @@ router.post('/login', async (req, res) => {
         });
     } catch (err) {
         console.error('Login error:', err);
+        res.status(500).json({ error: 'Something went wrong.' });
+    }
+});
+
+// Generates a reset code (separate from the registration OTP, with a real expiry
+// this time -- a stale password-reset code sitting around forever is riskier than
+// a stale registration code, which is at least gated behind login being blocked).
+router.post('/forgot-password', async (req, res) => {
+    const { username } = req.body;
+    if (!username) return res.status(400).json({ error: 'Missing username.' });
+
+    try {
+        const [rows] = await pool.query('SELECT email FROM users WHERE username = ?', [username]);
+        const user = rows[0];
+        if (!user) return res.status(404).json({ error: 'No such account.' });
+
+        const code = generateOtp();
+        await pool.query(
+            'UPDATE users SET reset_code = ?, reset_code_expires = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE username = ?',
+            [code, username]
+        );
+        await sendPasswordResetEmail(user.email, code);
+        res.json({ success: true, message: 'Check your email for a reset code.' });
+    } catch (err) {
+        console.error('Forgot password error:', err);
+        res.status(500).json({ error: 'Something went wrong.' });
+    }
+});
+
+router.post('/reset-password', async (req, res) => {
+    const { username, code, newPassword } = req.body;
+    if (!username || !code || !newPassword) {
+        return res.status(400).json({ error: 'Missing username, code, or new password.' });
+    }
+
+    try {
+        // Expiry check happens entirely in SQL (reset_code_expires compared to MySQL's own
+        // NOW()) instead of fetching a DATETIME into JS and comparing with new Date() --
+        // that path re-triggers the same driver timezone-reinterpretation bug fixed
+        // earlier for task dates, just on a column dateStrings doesn't cover.
+        const [rows] = await pool.query(
+            'SELECT reset_code, (reset_code_expires > NOW()) AS still_valid FROM users WHERE username = ?', [username]
+        );
+        const user = rows[0];
+        if (!user) return res.status(404).json({ error: 'No such account.' });
+        if (!user.reset_code || user.reset_code !== code) {
+            return res.status(400).json({ error: 'Incorrect code.' });
+        }
+        if (!user.still_valid) {
+            return res.status(400).json({ error: 'This code has expired. Request a new one.' });
+        }
+
+        const passwordHash = await bcrypt.hash(newPassword, 10);
+        await pool.query(
+            'UPDATE users SET password_hash = ?, reset_code = NULL, reset_code_expires = NULL WHERE username = ?',
+            [passwordHash, username]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Reset password error:', err);
         res.status(500).json({ error: 'Something went wrong.' });
     }
 });

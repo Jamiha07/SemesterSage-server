@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SemesterSage - Login</title>
-<link rel="stylesheet" href="css/style.css?v=8">
+<link rel="stylesheet" href="css/style.css?v=9">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0a1428">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -19,16 +19,20 @@
         <input id="username" type="text" placeholder="Enter your username">
 
         <label class="field-label">Password</label>
-        <input id="password" type="password" placeholder="Enter your password">
+        <div class="password-field">
+            <input id="password" type="password" placeholder="Enter your password">
+            <button type="button" class="password-toggle" onclick="togglePasswordVisibility('password', this)">&#128065;</button>
+        </div>
 
         <p class="error-text" id="errorText"></p>
 
         <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">Login</button>
+        <a class="auth-link" href="forgot-password.html">Forgot password?</a>
         <a class="auth-link" href="register.html">Don't have an account? Register here.</a>
     </div>
 </div>
 
-<script src="js/api.js?v=5"></script>
+<script src="js/api.js?v=6"></script>
 <script>
 document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
 

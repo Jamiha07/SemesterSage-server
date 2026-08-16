@@ -198,7 +198,10 @@ function injectProfileModal() {
             <div class="modal-box danger">
                 <p style="font-weight:bold; text-align:center; color:var(--red);">&#9888;&#65039; Delete Account</p>
                 <p class="text-secondary" style="font-size:13px;">Enter your password to confirm:</p>
-                <input id="deleteAccountPassword" type="password" placeholder="Password">
+                <div class="password-field">
+                    <input id="deleteAccountPassword" type="password" placeholder="Password">
+                    <button type="button" class="password-toggle" onclick="togglePasswordVisibility('deleteAccountPassword', this)">&#128065;</button>
+                </div>
                 <p class="error-text" id="deleteAccountError"></p>
                 <div style="display:flex; gap:10px; margin-top:18px;">
                     <button class="btn btn-ghost" style="flex:1;" onclick="closeDeleteAccountModal()">Cancel</button>

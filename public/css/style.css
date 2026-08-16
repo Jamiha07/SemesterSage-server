@@ -77,6 +77,21 @@ input:focus, select:focus {
     border-color: var(--cyan);
 }
 
+.password-field { position: relative; }
+.password-field input { padding-right: 42px; }
+.password-toggle {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 8px;
+}
+
 .btn {
     display: inline-flex;
     align-items: center;
