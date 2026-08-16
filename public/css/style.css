@@ -361,33 +361,38 @@ input:focus, select:focus {
 .vote-box-floating {
     position: absolute;
     right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 0;
+    bottom: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 2px;
 }
+/* Reserves room for the delete button below, so the vote box centers itself in
+   the space ABOVE it instead of overlapping on short cards. */
+.vote-box-floating.leave-room-below { bottom: 40px; }
+
 .vote-box-floating span { font-weight: bold; color: var(--text-primary); }
 
 .delete-circle-btn {
     position: absolute;
     right: 12px;
     bottom: 12px;
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
-    background: var(--red);
+    background: radial-gradient(circle at 35% 30%, #f87171, #dc2626 75%);
     color: #fff;
     border: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 10px;
     cursor: pointer;
-    box-shadow: 0 2px 10px rgba(239,68,68,0.45);
+    box-shadow: 0 2px 6px rgba(239,68,68,0.35);
 }
-.delete-circle-btn:hover { background: #dc2626; }
+.delete-circle-btn:hover { filter: brightness(1.1); }
 
 .vote-btn {
     background: transparent;
