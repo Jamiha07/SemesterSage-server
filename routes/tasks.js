@@ -98,7 +98,7 @@ router.post('/:id/study-plan', requireAuth, async (req, res) => {
         }
 
         const groqResponse = await callGroqWithFailover({
-            model: 'llama-3.3-70b-versatile',
+            model: 'openai/gpt-oss-120b',
             temperature: 0.7,
             messages: [
                 { role: 'system', content: buildSystemPrompt(task.course_tag) },
